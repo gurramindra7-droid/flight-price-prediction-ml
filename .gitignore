@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Original large model
+flight_price_model.joblib
+
+# Dataset files
+Data/*.csv
+
+# Local Streamlit
+.streamlit/secrets.toml
