@@ -8,7 +8,8 @@ import * as THREE from "three";
  * FlightScene.tsx) — this module only carries shared, frame-cheap values.
  */
 
-export const INTRO_DURATION = 6.4;
+/** Cinematic intro length in seconds — short enough that nobody needs a skip button. */
+export const INTRO_DURATION = 5.2;
 
 export const introState = {
   /** Seconds elapsed since the intro began. */
@@ -72,7 +73,7 @@ export function skipIntro() {
 
 /** Normalized aircraft flight progress through the intro (0..1), eased. */
 export function introProgress(t: number): number {
-  const raw = Math.min(1, Math.max(0, (t - 1.2) / 4.2));
+  const raw = Math.min(1, Math.max(0, (t - 1.0) / 3.6));
   // easeInOutCubic
   return raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
 }

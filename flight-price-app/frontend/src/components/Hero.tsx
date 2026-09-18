@@ -50,16 +50,16 @@ export function Hero({
         aria-hidden={!introDone}
       >
         <motion.p className="eyebrow" variants={item}>
-          AI-POWERED FARE ESTIMATION
+          AI-POWERED FLIGHT FARE PREDICTION
         </motion.p>
 
         <motion.h1 className="display-xl hero-title" variants={item}>
-          FLIGHT <span className="grad-text">INTELLIGENCE</span>
+          Predict Before <span className="grad-text">You Fly.</span>
         </motion.h1>
 
         <motion.p className="lead hero-lead" variants={item}>
-          An AI-powered flight fare prediction experience — route, airline, timing, duration,
-          stops and booking horizon, run through a trained machine-learning model in real time.
+          AI-powered flight fare estimation built around route, timing, airline, duration,
+          stops and travel class — computed in real time by a trained model.
         </motion.p>
 
         <motion.div className="hero-cta" variants={item}>

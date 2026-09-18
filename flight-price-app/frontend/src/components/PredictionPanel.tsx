@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Armchair,
   ArrowRight,
   CalendarClock,
   Clock3,
@@ -18,14 +17,14 @@ import { AIRLINE_LABEL, CITIES, CITY_POS, STOPS_LABEL, TIME_LABEL, type City } f
 import { ApiError, predictPrice, validateInput } from "../api";
 import type { PredictionInput } from "../api";
 import { useCountUp } from "../hooks/useCountUp";
-import { formatINR } from "../utils";
 
 type Status = "idle" | "loading" | "success" | "error";
 
 interface ResultState {
   price: number;
   summary: {
-    route: string;
+    sourceCity: string;
+    destCity: string;
     airline: string;
     cls: string;
     stops: string;
@@ -38,9 +37,10 @@ interface ResultState {
 
 /** Cosmetic staged status lines layered over the real request (never blocking). */
 const LOADING_STAGES = [
-  { at: 0, text: "Analyzing route…" },
-  { at: 900, text: "Analyzing flight characteristics…" },
-  { at: 1800, text: "Estimating fare…" },
+  { at: 0, text: "ANALYZING ROUTE" },
+  { at: 700, text: "ANALYZING FLIGHT PARAMETERS" },
+  { at: 1400, text: "CALCULATING FARE" },
+  { at: 2100, text: "ESTIMATING PRICE" },
 ];
 
 export function PredictionPanel({
@@ -115,7 +115,8 @@ export function PredictionPanel({
       setResult({
         price: res.predicted_price,
         summary: {
-          route: `${form.source} → ${form.destination}`,
+          sourceCity: form.source,
+          destCity: form.destination,
           airline: AIRLINE_LABEL[form.airline],
           cls: form.cls,
           stops: STOPS_LABEL[form.stops],
@@ -153,7 +154,7 @@ export function PredictionPanel({
         <div className="section-head">
           <p className="eyebrow">PREDICTION CONSOLE</p>
           <h2 className="section-title">
-            Estimate your <span className="grad-text">fare</span>
+            Predict <span className="grad-text">Flight Price</span>
           </h2>
           <p className="lead">
             Configure the journey below. Every request runs through the real trained model —
@@ -230,7 +231,31 @@ export function PredictionPanel({
                   exit={{ opacity: 0, y: -12, scale: 0.98 }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <p className="result-eyebrow">ESTIMATED FLIGHT PRICE</p>
+                  <p className="result-eyebrow">ESTIMATED FLIGHT FARE</p>
+                  <div className="result-route">
+                    <span className="result-route-city">{result.summary.sourceCity}</span>
+                    <span className="result-route-path" aria-hidden="true">
+                      <svg viewBox="0 0 120 24" width="120" height="24" fill="none">
+                        <path
+                          d="M4 20 Q 60 -8 116 20"
+                          stroke="rgba(124,196,255,0.25)"
+                          strokeWidth="1"
+                          strokeDasharray="3 4"
+                        />
+                        <motion.path
+                          d="M4 20 Q 60 -8 116 20"
+                          stroke="#7cc4ff"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                        />
+                      </svg>
+                      <Plane size={14} strokeWidth={1.8} />
+                    </span>
+                    <span className="result-route-city">{result.summary.destCity}</span>
+                  </div>
                   <div className="result-price-wrap">
                     <div className="result-ring" aria-hidden="true" />
                     <p className="result-price">
@@ -240,15 +265,11 @@ export function PredictionPanel({
                   </div>
                   <ul className="result-summary">
                     <li>
-                      <span><RouteIcon size={13} aria-hidden="true" /> Route</span>
-                      <strong>{result.summary.route}</strong>
-                    </li>
-                    <li>
                       <span><Plane size={13} aria-hidden="true" /> Airline</span>
                       <strong>{result.summary.airline}</strong>
                     </li>
                     <li>
-                      <span><Armchair size={13} aria-hidden="true" /> Class</span>
+                      <span><Sparkles size={13} aria-hidden="true" /> Class</span>
                       <strong>{result.summary.cls}</strong>
                     </li>
                     <li>
@@ -311,7 +332,15 @@ export function PredictionPanel({
 
 function CountUpPrice({ value }: { value: number }) {
   const shown = useCountUp(value, 1100);
-  return <span className="tabular">{formatINR(shown).replace("₹", "").trim()}</span>;
+  return <span className="tabular">{formatINR2(shown)}</span>;
+}
+
+/** Indian-grouping format with two decimals, no currency symbol (symbol is a separate span). */
+function formatINR2(value: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 /* ------------------------------------------------------------------ */

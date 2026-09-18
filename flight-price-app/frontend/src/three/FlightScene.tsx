@@ -187,15 +187,15 @@ function IntroTimeline({ onDone }: { onDone: () => void }) {
       onComplete: () => onDoneRef.current(),
     });
 
-    // Shot 1 (0–2.4s): distant 3/4 view, watching the aircraft enter.
-    tween.to(o.cameraTarget, { x: -4.2, y: 2.1, z: -1.2, duration: 2.4 });
-    // Shot 2 (2.4–4.2s): push in alongside the aircraft mid-flight.
-    tween.to(o.cameraTarget, { x: -1.6, y: 1.7, z: 0.4, duration: 1.8, ease: "power1.in" });
-    // Shot 3 (4.2–5.6s): swing around the nose into hero framing.
+    // Shot 1 (0–1.9s): distant 3/4 view, watching the aircraft enter.
+    tween.to(o.cameraTarget, { x: -4.2, y: 2.1, z: -1.2, duration: 1.9 });
+    // Shot 2 (1.9–3.5s): push in alongside the aircraft mid-flight.
+    tween.to(o.cameraTarget, { x: -1.6, y: 1.7, z: 0.4, duration: 1.6, ease: "power1.in" });
+    // Shot 3 (3.5–4.9s): swing around the nose into hero framing.
     tween.to(o.cameraTarget, { x: 0, y: 1.9, z: 2.4, duration: 1.4, ease: "power3.out" });
-    // Shot 4 (5.6–6.2s): settle; heroBlend hands the look-at to the hero target.
-    tween.to(o, { heroBlend: 1, duration: 0.8 }, ">-0.2");
-    tween.to(o, { networkReveal: 1, duration: 0.6 }, "<");
+    // Shot 4 (~4.7–5.2s): settle; heroBlend hands the look-at to the hero target.
+    tween.to(o, { heroBlend: 1, duration: 0.6 }, ">-0.2");
+    tween.to(o, { networkReveal: 1, duration: 0.5 }, "<");
 
     return () => {
       tween.kill();

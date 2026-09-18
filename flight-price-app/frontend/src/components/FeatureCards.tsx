@@ -5,7 +5,7 @@ import { BrainCircuit, Network, LineChart, MonitorSmartphone } from "lucide-reac
 const FEATURES = [
   {
     icon: BrainCircuit,
-    title: "AI Price Intelligence",
+    title: "AI Fare Intelligence",
     desc: "A trained Extra Trees regressor turns ten journey features into an honest fare estimate with known accuracy (R² 0.9866).",
   },
   {
@@ -15,12 +15,12 @@ const FEATURES = [
   },
   {
     icon: LineChart,
-    title: "Flight Analytics",
+    title: "Flight Parameters",
     desc: "Timing, duration, stops and booking horizon each shift the estimate. Explore how the model weighs your itinerary.",
   },
   {
     icon: MonitorSmartphone,
-    title: "Real-Time Prediction Interface",
+    title: "Instant Prediction",
     desc: "Sub-second inference from a serverless Python API, wrapped in a cinematic interface that stays out of your way.",
   },
 ] as const;

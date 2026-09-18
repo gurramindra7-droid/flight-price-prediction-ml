@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
+import { motion, useScroll, useSpring } from "framer-motion";
 import { Navbar } from "./components/Navbar";
 import { Hero } from "./components/Hero";
-import { FeatureCards } from "./components/FeatureCards";
-import { PredictionPanel } from "./components/PredictionPanel";
-import { ModelSection } from "./components/ModelSection";
 import { RouteMapSection } from "./components/RouteMapSection";
+import { PredictionPanel } from "./components/PredictionPanel";
+import { FeatureCards } from "./components/FeatureCards";
+import { ModelSection } from "./components/ModelSection";
 import { Footer } from "./components/Footer";
 import { useSmoothScroll } from "./hooks/useSmoothScroll";
 import { introState } from "./introState";
@@ -18,6 +19,10 @@ export default function App() {
   const [introDone, setIntroDone] = useState(cap.reducedMotion);
   const [source, setSource] = useState<City | null>(null);
   const [destination, setDestination] = useState<City | null>(null);
+
+  // Cinematic scroll progress bar along the top of the viewport.
+  const { scrollYProgress } = useScroll();
+  const progress = useSpring(scrollYProgress, { stiffness: 90, damping: 28, mass: 0.4 });
 
   const handleCitiesChange = useCallback((s: City | null, d: City | null) => {
     setSource(s);
@@ -33,15 +38,20 @@ export default function App() {
   return (
     <>
       <Navbar visible={introDone} />
+      <motion.div
+        className="scroll-progress"
+        style={{ scaleX: progress }}
+        aria-hidden="true"
+      />
       <main id="main">
         <Hero introDone={introDone} reduced={cap.reducedMotion} onIntroFinish={handleIntroFinish} />
-        <FeatureCards />
+        <RouteMapSection source={source} destination={destination} />
         <hr className="divider-glow" />
         <PredictionPanel onCitiesChange={handleCitiesChange} />
         <hr className="divider-glow" />
-        <ModelSection />
+        <FeatureCards />
         <hr className="divider-dashed" />
-        <RouteMapSection source={source} destination={destination} />
+        <ModelSection />
       </main>
       <Footer />
     </>

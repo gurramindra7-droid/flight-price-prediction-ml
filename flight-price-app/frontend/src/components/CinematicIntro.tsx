@@ -9,9 +9,11 @@ import {
 } from "../introState";
 
 /**
- * Cinematic intro overlay: title cards timed to the GSAP flight sequence,
- * a persistent skip control, and a static reduced-motion / no-WebGL fallback.
- * Session-flagged so it plays once per browser session (fresh loads only).
+ * Cinematic intro overlay: title cards timed to the GSAP flight sequence and a
+ * static reduced-motion / no-WebGL fallback. Session-flagged so it plays once
+ * per browser session (fresh loads only). There is intentionally NO visible
+ * skip control — the sequence is short (~5s) by design; Escape remains a
+ * hidden keyboard affordance for accessibility only.
  */
 
 type Phase = "black" | "approach" | "wordmark";
@@ -77,13 +79,13 @@ export function CinematicIntro({ onFinish }: { onFinish: () => void }) {
     const tick = () => {
       const t = introState.t;
       const next: Phase =
-        t < 1.3 ? "black" : t < INTRO_DURATION - 1.9 ? "approach" : "wordmark";
+        t < 1.1 ? "black" : t < INTRO_DURATION - 1.6 ? "approach" : "wordmark";
       setPhase((prev) => (prev === next ? prev : next));
       if (!finishedRef.current) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
 
-    // Skip via Escape, always.
+    // Hidden keyboard affordance (no visible skip UI, per design spec).
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         skipIntro();
@@ -98,11 +100,6 @@ export function CinematicIntro({ onFinish }: { onFinish: () => void }) {
       cancelAnimationFrame(raf);
     };
   }, [staticMode, finish]);
-
-  const handleSkip = () => {
-    if (!staticMode) skipIntro();
-    finish();
-  };
 
   /* Freeze scrolling behind the cinematic. */
   useEffect(() => {
@@ -138,7 +135,7 @@ export function CinematicIntro({ onFinish }: { onFinish: () => void }) {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.7 }}
           >
-            Machine-learning flight fare estimation
+            AI-POWERED FLIGHT FARE PREDICTION
           </motion.p>
         </div>
       ) : (
@@ -179,7 +176,7 @@ export function CinematicIntro({ onFinish }: { onFinish: () => void }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8, duration: 0.8, ease: "easeOut" }}
               >
-                Predict the price of your journey
+                AI-POWERED FLIGHT FARE PREDICTION
               </motion.p>
             </motion.div>
           )}
@@ -195,19 +192,18 @@ export function CinematicIntro({ onFinish }: { onFinish: () => void }) {
               <h1 className="intro-title intro-title--final">
                 FLIGHT <span>INTELLIGENCE</span>
               </h1>
+              <motion.p
+                className="intro-sub"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45, duration: 0.7, ease: "easeOut" }}
+              >
+                AI-POWERED FLIGHT FARE PREDICTION
+              </motion.p>
             </motion.div>
           )}
         </AnimatePresence>
       )}
-
-      <button
-        type="button"
-        className="intro-skip"
-        onClick={handleSkip}
-        aria-label="Skip introduction animation (Escape)"
-      >
-        Skip intro
-      </button>
     </motion.div>
   );
 }
