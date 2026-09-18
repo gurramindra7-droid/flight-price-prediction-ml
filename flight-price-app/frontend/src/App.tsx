@@ -1,19 +1,28 @@
 import { useCallback, useState } from "react";
 import { Navbar } from "./components/Navbar";
 import { Hero } from "./components/Hero";
-import { PredictionSection } from "./components/PredictionSection";
+import { FeatureCards } from "./components/FeatureCards";
+import { PredictionPanel } from "./components/PredictionPanel";
 import { ModelSection } from "./components/ModelSection";
 import { RouteMapSection } from "./components/RouteMapSection";
 import { Footer } from "./components/Footer";
 import { useSmoothScroll } from "./hooks/useSmoothScroll";
 import { introState } from "./introState";
-import { prefersReducedMotion } from "./utils";
+import { getCapabilities } from "./capabilities";
+import type { City } from "./constants";
 
 export default function App() {
   useSmoothScroll();
 
-  const reduced = prefersReducedMotion();
-  const [introDone, setIntroDone] = useState(reduced);
+  const cap = getCapabilities();
+  const [introDone, setIntroDone] = useState(cap.reducedMotion);
+  const [source, setSource] = useState<City | null>(null);
+  const [destination, setDestination] = useState<City | null>(null);
+
+  const handleCitiesChange = useCallback((s: City | null, d: City | null) => {
+    setSource(s);
+    setDestination(d);
+  }, []);
 
   const handleIntroFinish = useCallback(() => {
     introState.done = true;
@@ -23,14 +32,16 @@ export default function App() {
 
   return (
     <>
-      <Navbar />
+      <Navbar visible={introDone} />
       <main id="main">
-        <Hero introDone={introDone} reduced={reduced} onIntroFinish={handleIntroFinish} />
-        <PredictionSection />
+        <Hero introDone={introDone} reduced={cap.reducedMotion} onIntroFinish={handleIntroFinish} />
+        <FeatureCards />
+        <hr className="divider-glow" />
+        <PredictionPanel onCitiesChange={handleCitiesChange} />
         <hr className="divider-glow" />
         <ModelSection />
         <hr className="divider-dashed" />
-        <RouteMapSection />
+        <RouteMapSection source={source} destination={destination} />
       </main>
       <Footer />
     </>

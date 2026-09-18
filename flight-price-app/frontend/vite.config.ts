@@ -22,7 +22,6 @@ export default defineConfig({
         manualChunks: {
           three: ["three", "@react-three/fiber", "@react-three/drei"],
           motion: ["framer-motion"],
-          react: ["react", "react-dom"],
         },
       },
     },

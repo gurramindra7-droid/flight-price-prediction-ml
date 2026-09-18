@@ -1,7 +1,13 @@
+import { Suspense, lazy } from "react";
 import { motion } from "framer-motion";
-import { FlightScene } from "../three/FlightScene";
-import { IntroOverlay } from "./IntroOverlay";
+import { CinematicIntro } from "./CinematicIntro";
 import { METRICS } from "../metrics";
+import { getCapabilities } from "../capabilities";
+
+/** Code-split the heavy 3D hero scene so it never blocks first paint. */
+const FlightScene = lazy(() =>
+  import("../three/FlightScene").then((m) => ({ default: m.FlightScene })),
+);
 
 const container = {
   hidden: {},
@@ -23,12 +29,18 @@ export function Hero({
 }) {
   return (
     <section id="top" className="hero" aria-label="Flight Intelligence — flight price prediction">
-      {/* 3D scene always mounted; overlay only while the cinematic plays */}
+      {/* 3D scene mounted whenever WebGL is viable; static gradient otherwise */}
       <div className="hero-scene" aria-hidden="true">
-        <FlightScene reduced={reduced} />
+        {reduced || !getCapabilities().webgl ? (
+          <div className="hero-static-fallback" />
+        ) : (
+          <Suspense fallback={null}>
+            <FlightScene reduced={reduced} />
+          </Suspense>
+        )}
       </div>
 
-      {!introDone && <IntroOverlay onFinish={onIntroFinish} reduced={reduced} />}
+      {!introDone && <CinematicIntro onFinish={onIntroFinish} />}
 
       <motion.div
         className="container hero-content"
@@ -38,29 +50,25 @@ export function Hero({
         aria-hidden={!introDone}
       >
         <motion.p className="eyebrow" variants={item}>
-          MACHINE LEARNING × AVIATION
+          AI-POWERED FARE ESTIMATION
         </motion.p>
 
         <motion.h1 className="display-xl hero-title" variants={item}>
-          Predict Your
-          <br />
-          <span className="grad-text">Flight Price</span>
+          FLIGHT <span className="grad-text">INTELLIGENCE</span>
         </motion.h1>
 
         <motion.p className="lead hero-lead" variants={item}>
-          Machine-learning powered flight price estimation based on route, airline, timing,
-          duration, stops and booking horizon.
+          An AI-powered flight fare prediction experience — route, airline, timing, duration,
+          stops and booking horizon, run through a trained machine-learning model in real time.
         </motion.p>
 
         <motion.div className="hero-cta" variants={item}>
           <a href="#predict" className="btn btn-primary">
             Predict Flight Price
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
-              <path d="M2 8h11M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ArrowGlyph />
           </a>
-          <a href="#model" className="btn btn-ghost">
-            Explore Model
+          <a href="#routes" className="btn btn-ghost">
+            Explore the Network
           </a>
         </motion.div>
 
@@ -81,5 +89,19 @@ export function Hero({
         <span className="hero-scroll-line" aria-hidden="true" />
       </a>
     </section>
+  );
+}
+
+function ArrowGlyph() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+      <path
+        d="M2 8h11M9 4l4 4-4 4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

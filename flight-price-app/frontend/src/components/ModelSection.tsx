@@ -36,13 +36,13 @@ export function ModelSection() {
     <section id="model" className="model section-pad">
       <div className="container">
         <div className="section-head">
-          <p className="eyebrow">THE MODEL</p>
+          <p className="eyebrow">ABOUT THE ENGINE</p>
           <h2 className="section-title">
             Inside the <span className="grad-text">prediction engine</span>
           </h2>
           <p className="lead">
             A scikit-learn Pipeline: one-hot encoded categorical features feed a trained
-            Extra Trees regressor. Ten input features, one fare estimate.
+            Extra Trees regressor. Ten input features, one fare estimate — fully transparent.
           </p>
         </div>
 

@@ -20,7 +20,7 @@ export function Footer() {
 
         <p className="footer-note">
           Predictions are machine-learning estimates from a trained Extra Trees model — not
-          guaranteed airline prices.
+          guaranteed airline prices. City imagery from Wikimedia Commons.
         </p>
 
         <p className="footer-meta mono">

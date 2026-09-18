@@ -2,11 +2,13 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { introProgress, introState, lerp } from "../introState";
+import { makeRimGlowMaterial } from "./shaders";
 
 /**
  * Stylized widebody airliner assembled from Three.js primitives — recognizable
  * proportions (long fuselage, swept wings, tail, twin engines) with metallic
- * PBR materials. No external assets; all geometry is generated locally.
+ * PBR materials plus a custom fresnel rim-glow shell. No external assets; all
+ * geometry is generated locally (user-selected approach over a downloaded GLB).
  *
  * Coordinate convention: aircraft nose points toward -Z when rotation.y = 0.
  * The plane travels from far depth toward/past the camera during the intro.
@@ -21,7 +23,7 @@ function fuselageProfile(): THREE.Vector2[] {
   const R = FUSELAGE_RADIUS;
   const L = FUSELAGE_LENGTH;
   return [
-    new THREE.Vector2(0.001, 0),           // nose tip
+    new THREE.Vector2(0.001, 0), // nose tip
     new THREE.Vector2(R * 0.22, L - 0.2),
     new THREE.Vector2(R * 0.5, L - 0.55),
     new THREE.Vector2(R * 0.8, L - 1.05),
@@ -30,7 +32,7 @@ function fuselageProfile(): THREE.Vector2[] {
     new THREE.Vector2(R * 0.85, L - 5.3),
     new THREE.Vector2(R * 0.55, L - 5.9),
     new THREE.Vector2(R * 0.3, L - 6.25),
-    new THREE.Vector2(0.001, L),           // tail tip
+    new THREE.Vector2(0.001, L), // tail tip
   ];
 }
 
@@ -38,10 +40,10 @@ function wingGeometry(halfSign: 1 | -1): THREE.BufferGeometry {
   // Half wing planform on the XY plane (x = spanwise, y = chordwise),
   // extruded thinly, then laid flat and swept backward.
   const shape = new THREE.Shape();
-  shape.moveTo(0, 0.55);        // root leading edge
-  shape.lineTo(2.05, -0.35);    // tip leading edge (swept)
-  shape.lineTo(2.05, -0.62);    // tip trailing edge
-  shape.lineTo(0, -0.95);       // root trailing edge
+  shape.moveTo(0, 0.55); // root leading edge
+  shape.lineTo(2.05, -0.35); // tip leading edge (swept)
+  shape.lineTo(2.05, -0.62); // tip trailing edge
+  shape.lineTo(0, -0.95); // root trailing edge
   shape.closePath();
 
   const geo = new THREE.ExtrudeGeometry(shape, {
@@ -87,7 +89,7 @@ function nacelleGeometry(): THREE.BufferGeometry {
 
 export function Aircraft({ reduced = false }: { reduced?: boolean }) {
   const group = useRef<THREE.Group>(null);
-  const inner = useRef<THREE.Group>(null);
+  const rim = useRef<THREE.Mesh>(null);
   /** Always-running clock so the post-intro idle float keeps moving. */
   const elapsed = useRef(0);
 
@@ -140,7 +142,14 @@ export function Aircraft({ reduced = false }: { reduced?: boolean }) {
       emissiveIntensity: 0.25,
     });
     const glow = new THREE.MeshBasicMaterial({ color: "#9ec7ff" });
-    return { fuselage, wing, dark, engine, accent, glow };
+    const rimShell = makeRimGlowMaterial({
+      color: "#5ea8ff",
+      baseColor: "#040a14",
+      power: 2.6,
+      intensity: 1.35,
+      opacity: 0.85,
+    });
+    return { fuselage, wing, dark, engine, accent, glow, rimShell };
   }, []);
 
   useFrame((_, rawDelta) => {
@@ -178,9 +187,11 @@ export function Aircraft({ reduced = false }: { reduced?: boolean }) {
 
   return (
     <group ref={group} position={[-30, 1.1, -64]}>
-      <group ref={inner} scale={reduced ? 0.9 : 1}>
+      <group scale={reduced ? 0.9 : 1}>
         {/* Fuselage */}
         <mesh geometry={fuselageGeo} material={mats.fuselage} castShadow={false} />
+        {/* Fresnel rim-glow shell — slightly larger, renders the blue edge */}
+        <mesh ref={rim} geometry={fuselageGeo} material={mats.rimShell} scale={1.03} />
         {/* Cockpit windows band */}
         <mesh position={[0, 0.07, -(FUSELAGE_LENGTH - 0.85)]} material={mats.dark}>
           <sphereGeometry args={[FUSELAGE_RADIUS * 0.92, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
@@ -239,5 +250,3 @@ export function Aircraft({ reduced = false }: { reduced?: boolean }) {
     </group>
   );
 }
-
-

@@ -1,3 +1,4 @@
+import { Armchair, ArrowDownRight, ArrowUpRight, CalendarClock, Clock3, Plane, Route as RouteIcon, Send, Timer } from "lucide-react";
 import { AIRLINES, CITIES, TIME_SLOTS } from "../constants";
 import type { FlightForm } from "../formState";
 
@@ -38,7 +39,7 @@ export function FlightFormFields({
           <SelectField
             id={`${idPrefix}-source`}
             label="From"
-            icon="source"
+            icon={ArrowUpRight}
             value={form.source}
             options={CITIES}
             error={errors.source}
@@ -47,7 +48,7 @@ export function FlightFormFields({
           <SelectField
             id={`${idPrefix}-dest`}
             label="To"
-            icon="dest"
+            icon={ArrowDownRight}
             value={form.destination}
             options={CITIES}
             error={errors.destination}
@@ -56,7 +57,7 @@ export function FlightFormFields({
           <SelectField
             id={`${idPrefix}-airline`}
             label="Airline"
-            icon="airline"
+            icon={Plane}
             value={form.airline}
             options={AIRLINES}
             error={errors.airline}
@@ -72,7 +73,7 @@ export function FlightFormFields({
           <SelectField
             id={`${idPrefix}-dep`}
             label="Departure"
-            icon="dep"
+            icon={Send}
             value={form.departure}
             options={TIME_SLOTS}
             error={errors.departure}
@@ -81,7 +82,7 @@ export function FlightFormFields({
           <SelectField
             id={`${idPrefix}-arr`}
             label="Arrival"
-            icon="arr"
+            icon={Clock3}
             value={form.arrival}
             options={TIME_SLOTS}
             error={errors.arrival}
@@ -89,7 +90,7 @@ export function FlightFormFields({
           />
           <div className="field">
             <label className="field-label" htmlFor={`${idPrefix}-days`}>
-              <Icon name="calendar" />
+              <CalendarClock size={14} strokeWidth={1.7} aria-hidden="true" />
               Days left
             </label>
             <div className="range-row">
@@ -119,7 +120,7 @@ export function FlightFormFields({
         <div className="form-grid">
           <div className="field">
             <label className="field-label" htmlFor={`${idPrefix}-duration`}>
-              <Icon name="clock" />
+              <Timer size={14} strokeWidth={1.7} aria-hidden="true" />
               Duration (hrs)
             </label>
             <input
@@ -144,7 +145,7 @@ export function FlightFormFields({
 
           <div className="field">
             <span className="field-label" id={`${idPrefix}-stops-label`}>
-              <Icon name="route" />
+              <RouteIcon size={14} strokeWidth={1.7} aria-hidden="true" />
               Stops
             </span>
             <div className="segmented" role="group" aria-labelledby={`${idPrefix}-stops-label`}>
@@ -163,7 +164,7 @@ export function FlightFormFields({
 
           <div className="field">
             <span className="field-label" id={`${idPrefix}-class-label`}>
-              <Icon name="seat" />
+              <Armchair size={14} strokeWidth={1.7} aria-hidden="true" />
               Class
             </span>
             <div className="segmented" role="group" aria-labelledby={`${idPrefix}-class-label`}>
@@ -188,7 +189,7 @@ export function FlightFormFields({
 function SelectField({
   id,
   label,
-  icon,
+  icon: Icon,
   value,
   options,
   error,
@@ -196,7 +197,7 @@ function SelectField({
 }: {
   id: string;
   label: string;
-  icon: string;
+  icon: typeof Plane;
   value: string;
   options: readonly string[];
   error?: string;
@@ -205,7 +206,7 @@ function SelectField({
   return (
     <div className="field">
       <label className="field-label" htmlFor={id}>
-        <Icon name={icon} />
+        <Icon size={14} strokeWidth={1.7} aria-hidden="true" />
         {label}
       </label>
       <select
@@ -239,84 +240,4 @@ function labelFor(value: string): string {
     Late_Night: "Late Night",
   };
   return map[value] ?? value;
-}
-
-export function Icon({ name }: { name: string }) {
-  const common = {
-    viewBox: "0 0 24 24",
-    width: 14,
-    height: 14,
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.7,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
-  switch (name) {
-    case "source":
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="8" />
-          <circle cx="12" cy="12" r="2.5" />
-        </svg>
-      );
-    case "dest":
-      return (
-        <svg {...common}>
-          <path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10Z" />
-          <circle cx="12" cy="11" r="2.5" />
-        </svg>
-      );
-    case "airline":
-      return (
-        <svg {...common}>
-          <path d="M2.5 19.5 21 12 2.5 4.5 6 12l-3.5 7.5Z" />
-        </svg>
-      );
-    case "dep":
-      return (
-        <svg {...common}>
-          <path d="M3 18h18M4 15l4-1 8-8 3 1-6 7 5 1 2-2" />
-        </svg>
-      );
-    case "arr":
-      return (
-        <svg {...common}>
-          <path d="M3 18h18M20 15l-4-1-8-8-3 1 6 7-5 1-2-2" />
-        </svg>
-      );
-    case "calendar":
-      return (
-        <svg {...common}>
-          <rect x="4" y="5" width="16" height="16" rx="2" />
-          <path d="M4 10h16M8 3v4M16 3v4" />
-        </svg>
-      );
-    case "clock":
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="13" r="7.5" />
-          <path d="M12 9.5V13l2.5 2M9 2.5h6" />
-        </svg>
-      );
-    case "route":
-      return (
-        <svg {...common}>
-          <circle cx="5" cy="18" r="2.5" />
-          <circle cx="19" cy="6" r="2.5" />
-          <path d="M7.5 16.5C11 14 13 10 16.5 7.5" strokeDasharray="2.5 3" />
-        </svg>
-      );
-    case "seat":
-      return (
-        <svg {...common}>
-          <path d="M6 4v10a3 3 0 0 0 3 3h7" />
-          <path d="M17 10v4a3 3 0 0 1-3 3" />
-          <path d="M6 20h11" />
-        </svg>
-      );
-    default:
-      return null;
-  }
 }

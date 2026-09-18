@@ -1,8 +1,28 @@
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import {
+  AdaptiveDpr,
+  AdaptiveEvents,
+  Environment,
+  Lightformer,
+  Preload,
+  Sparkles,
+} from "@react-three/drei";
+import {
+  Bloom,
+  ChromaticAberration,
+  DepthOfField,
+  EffectComposer,
+  Noise,
+  Vignette,
+} from "@react-three/postprocessing";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import * as THREE from "three";
 import { Aircraft } from "./Aircraft";
-import { introState, lerp, smoothstep } from "../introState";
+import { makeAtmosphereMaterial } from "./shaders";
+import { introState, lerp } from "../introState";
+import { getCapabilities, sceneQuality, type SceneQuality } from "../capabilities";
 
 /** Deterministic pseudo-random so layouts are stable across reloads. */
 function mulberry32(seed: number) {
@@ -11,8 +31,8 @@ function mulberry32(seed: number) {
     a |= 0;
     a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    t = (t ^ (t >>> 14)) >>> 0;
+    return t / 4294967296;
   };
 }
 
@@ -53,61 +73,14 @@ function AtmosphericParticles({ count }: { count: number }) {
     const pos = pts.geometry.attributes.position as THREE.BufferAttribute;
     const arr = pos.array as Float32Array;
     for (let i = 0; i < count; i++) {
-      // slow drift along +X like distant air traffic / dust in light
       arr[i * 3] += speeds[i] * delta * 0.55;
       if (arr[i * 3] > 23) arr[i * 3] = -23;
     }
     pos.needsUpdate = true;
-    // fade particles slightly with mouse parallax
     pts.position.y = Math.sin(state.clock.elapsedTime * 0.12) * 0.35;
   });
 
   return <points ref={ref} geometry={geometry} material={material} frustumCulled={false} />;
-}
-
-/* ------------------------------ clouds ------------------------------ */
-
-function CloudPuffs({ reduced }: { reduced: boolean }) {
-  const group = useRef<THREE.Group>(null);
-
-  const puffs = useMemo(() => {
-    const rand = mulberry32(7);
-    const n = reduced ? 7 : 14;
-    return Array.from({ length: n }, () => ({
-      position: [
-        (rand() - 0.5) * 40,
-        (rand() - 0.2) * 12 + 2.5,
-        -8 - rand() * 26,
-      ] as [number, number, number],
-      scale: 2.2 + rand() * 3.4,
-      speed: 0.05 + rand() * 0.12,
-    }));
-  }, [reduced]);
-
-  useFrame((_, rawDelta) => {
-    const delta = Math.min(rawDelta, 0.05);
-    const g = group.current;
-    if (!g) return;
-    g.children.forEach((child, i) => {
-      child.position.x += puffs[i].speed * delta;
-      if (child.position.x > 22) child.position.x = -22;
-    });
-  });
-
-  return (
-    <group ref={group}>
-      {puffs.map((p, i) => (
-        <sprite key={i} position={p.position} scale={[p.scale * 2.4, p.scale, 1]}>
-          <spriteMaterial
-            color="#22344e"
-            transparent
-            opacity={0.16}
-            depthWrite={false}
-          />
-        </sprite>
-      ))}
-    </group>
-  );
 }
 
 /* --------------------------- runway lights --------------------------- */
@@ -148,17 +121,32 @@ function RunwayLights() {
   );
 }
 
+/* --------------------------- atmosphere ------------------------------ */
+
+function Atmosphere() {
+  const material = useMemo(() => makeAtmosphereMaterial(), []);
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame(({ camera }) => {
+    // Keep the dome centered on the camera so the gradient never "ends".
+    ref.current?.position.copy(camera.position);
+  });
+  return (
+    <mesh ref={ref} material={material} scale={110}>
+      <sphereGeometry args={[1, 24, 16]} />
+    </mesh>
+  );
+}
+
+/* --------------------------- GSAP camera rig --------------------------- */
+
 const LOOK_PLANE = new THREE.Vector3(0, 1.4, -4.2);
 
-/* --------------------------- camera rig --------------------------- */
-
-function CameraRig({ reduced }: { reduced: boolean }) {
+function CameraRig() {
   const { camera } = useThree();
   const lookTarget = useMemo(() => new THREE.Vector3(0, 0.6, -6), []);
 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
-    const t = introState.t;
     const cam = camera as THREE.PerspectiveCamera;
 
     if (introState.done) {
@@ -173,29 +161,13 @@ function CameraRig({ reduced }: { reduced: boolean }) {
       return;
     }
 
-    // Cinematic phase: sweep from the wide approach framing into the hero.
-    const ax = -6.5, ay = 2.4, az = -2;
-    const bx = 0, by = 1.9, bz = 2.4;
-    const k = smoothstep(2.6, 5.4, t);
-    let x = lerp(ax, bx, k);
-    let y = lerp(ay, by, k);
-    let z = lerp(az, bz, k);
+    // Cinematic phase: chase the GSAP-driven camera target with soft lag,
+    // blend the look-at from the flying aircraft into the hero framing.
+    cam.position.x = lerp(cam.position.x, introState.cameraTarget.x, 1 - Math.pow(0.001, delta));
+    cam.position.y = lerp(cam.position.y, introState.cameraTarget.y, 1 - Math.pow(0.001, delta));
+    cam.position.z = lerp(cam.position.z, introState.cameraTarget.z, 1 - Math.pow(0.001, delta));
 
-    if (!reduced) {
-      // gentle handheld drift, fading as we settle into the hero framing
-      const wobble = 1 - k;
-      x += Math.sin(t * 0.6) * 0.35 * wobble;
-      y += Math.cos(t * 0.45) * 0.2 * wobble;
-      x += introState.mouse.x * 0.5 * k;
-      y += introState.mouse.y * -0.3 * k;
-    }
-
-    cam.position.x = lerp(cam.position.x, x, 1 - Math.pow(0.001, delta));
-    cam.position.y = lerp(cam.position.y, y, 1 - Math.pow(0.001, delta));
-    cam.position.z = lerp(cam.position.z, z, 1 - Math.pow(0.001, delta));
-
-    // Track the aircraft during approach, then settle on the hero target.
-    const target = k > 0.55 ? LOOK_PLANE : introState.aircraftPos;
+    const target = introState.heroBlend > 0.55 ? LOOK_PLANE : introState.aircraftPos;
     lookTarget.lerp(target, 0.1);
     cam.lookAt(lookTarget);
   });
@@ -203,38 +175,145 @@ function CameraRig({ reduced }: { reduced: boolean }) {
   return null;
 }
 
+/** GSAP timeline that scrubs introState.cameraTarget through the shot list. */
+function IntroTimeline({ onDone }: { onDone: () => void }) {
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
+  useGSAP(() => {
+    const o = introState;
+    const tween = gsap.timeline({
+      defaults: { ease: "power2.inOut" },
+      onComplete: () => onDoneRef.current(),
+    });
+
+    // Shot 1 (0–2.4s): distant 3/4 view, watching the aircraft enter.
+    tween.to(o.cameraTarget, { x: -4.2, y: 2.1, z: -1.2, duration: 2.4 });
+    // Shot 2 (2.4–4.2s): push in alongside the aircraft mid-flight.
+    tween.to(o.cameraTarget, { x: -1.6, y: 1.7, z: 0.4, duration: 1.8, ease: "power1.in" });
+    // Shot 3 (4.2–5.6s): swing around the nose into hero framing.
+    tween.to(o.cameraTarget, { x: 0, y: 1.9, z: 2.4, duration: 1.4, ease: "power3.out" });
+    // Shot 4 (5.6–6.2s): settle; heroBlend hands the look-at to the hero target.
+    tween.to(o, { heroBlend: 1, duration: 0.8 }, ">-0.2");
+    tween.to(o, { networkReveal: 1, duration: 0.6 }, "<");
+
+    return () => {
+      tween.kill();
+    };
+  }, []);
+
+  return null;
+}
+
+/* --------------------------- postprocessing --------------------------- */
+
+function PostFX({ quality }: { quality: SceneQuality }) {
+  if (!quality.postprocessing) return null;
+  return (
+    <EffectComposer multisampling={0} enableNormalPass={false}>
+      <Bloom
+        intensity={0.55}
+        luminanceThreshold={0.22}
+        luminanceSmoothing={0.4}
+        mipmapBlur
+        radius={0.7}
+      />
+      {quality.depthOfField ? (
+        <DepthOfField focusDistance={0.012} focalLength={0.05} bokehScale={2.2} height={480} />
+      ) : (
+        <></>
+      )}
+      <Vignette eskil={false} offset={0.22} darkness={0.72} />
+      <ChromaticAberration offset={new THREE.Vector2(0.00045, 0.00045)} radialModulation modulationOffset={0.4} />
+      <Noise premultiply opacity={0.045} />
+    </EffectComposer>
+  );
+}
+
 /* --------------------------- scene root --------------------------- */
 
 export function FlightScene({ reduced = false }: { reduced?: boolean }) {
-  const dpr: [number, number] = reduced ? [1, 1.2] : [1, 1.8];
-  const particleCount = reduced ? 260 : 750;
+  const quality = useMemo<SceneQuality>(() => {
+    if (reduced) {
+      return {
+        particles: 240,
+        postprocessing: false,
+        depthOfField: false,
+        dpr: [1, 1.2],
+        antialias: true,
+        mapSegments: 36,
+        arcParticles: 0,
+      };
+    }
+    return sceneQuality(getCapabilities());
+  }, [reduced]);
+
+  const { invalidate } = useThree();
+  void invalidate;
+
+  useEffect(() => {
+    const onMouse = (e: PointerEvent) => {
+      introState.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      introState.mouse.y = (e.clientY / window.innerHeight) * 2 - 1;
+    };
+    window.addEventListener("pointermove", onMouse, { passive: true });
+    return () => window.removeEventListener("pointermove", onMouse);
+  }, []);
+
+  const dpr: [number, number] = reduced ? [1, 1.2] : quality.dpr;
+  const particleCount = reduced ? 260 : quality.particles;
 
   return (
     <Canvas
       dpr={dpr}
-      gl={{ antialias: !reduced, alpha: true, powerPreference: "high-performance" }}
-      camera={{ fov: reduced ? 46 : 42, near: 0.1, far: 160, position: [-6.5, 2.4, -2] }}
+      flat
+      gl={{
+        antialias: reduced ? true : quality.antialias,
+        alpha: false,
+        powerPreference: "high-performance",
+      }}
+      camera={{ fov: reduced ? 46 : 42, near: 0.1, far: 220, position: [-6.5, 2.4, -2] }}
       onCreated={({ gl }) => {
-        gl.setClearColor(new THREE.Color("#05070d"), 0);
+        gl.setClearColor(new THREE.Color("#020409"), 1);
       }}
       style={{ position: "absolute", inset: 0 }}
       aria-hidden="true"
     >
-      <fog attach="fog" args={["#05070d", 12, 58]} />
+      <fog attach="fog" args={["#05070d", 14, 70]} />
 
       <Suspense fallback={null}>
-        {/* Lighting: cool key light, warm-ish rim, soft fill */}
+        {/* Lighting: cool key light, blue rim, soft fill */}
         <ambientLight intensity={0.35} color="#3b4a66" />
         <directionalLight position={[6, 8, 4]} intensity={1.5} color="#bfd6f5" />
         <directionalLight position={[-8, 3, -6]} intensity={0.7} color="#3f6fb5" />
         <pointLight position={[0, 1.4, 2]} intensity={0.35} color="#6ea8ff" />
 
+        {/* Studio-style reflections without loading an HDRI file */}
+        <Environment resolution={128} frames={1}>
+          <Lightformer form="rect" intensity={2.2} color="#9fc2ff" position={[0, 5, -6]} scale={[10, 3, 1]} />
+          <Lightformer form="rect" intensity={1.1} color="#3a5fa8" position={[-6, 2, 2]} scale={[6, 1.5, 1]} rotation-y={Math.PI / 3} />
+          <Lightformer form="rect" intensity={1.4} color="#66e3ff" position={[6, 1, -2]} scale={[5, 1.2, 1]} rotation-y={-Math.PI / 3} />
+        </Environment>
+
         <Aircraft reduced={reduced} />
         <AtmosphericParticles count={particleCount} />
-        <CloudPuffs reduced={reduced} />
+        {!reduced && (
+          <Sparkles count={90} scale={[40, 16, 40]} size={1.6} speed={0.25} opacity={0.35} color="#9fd4ff" />
+        )}
         <RunwayLights />
-        <CameraRig reduced={reduced} />
+        <Atmosphere />
+        {!reduced && <CameraRig />}
+        {!reduced && (
+          <IntroTimeline
+            onDone={() => window.dispatchEvent(new CustomEvent("fi:intro-complete"))}
+          />
+        )}
+        <Preload all />
+        <AdaptiveDpr pixelated />
+        <AdaptiveEvents />
       </Suspense>
+
+      {!reduced && <PostFX quality={quality} />}
     </Canvas>
   );
 }
