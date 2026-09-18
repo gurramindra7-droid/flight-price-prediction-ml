@@ -20,3 +20,5 @@ venv/
 Thumbs.db
 
 # Do NOT ignore model/ — the joblib model is tracked via Git LFS
+
+.vercel
