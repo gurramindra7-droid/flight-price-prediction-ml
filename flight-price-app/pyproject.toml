@@ -8,3 +8,6 @@ dependencies = [
     "scikit-learn",
     "joblib"
 ]
+
+[tool.vercel]
+entrypoint = "api.predict:app"
