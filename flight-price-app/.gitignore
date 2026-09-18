@@ -1,0 +1,22 @@
+# Frontend
+node_modules/
+dist/
+*.local
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.venv-py312/
+venv/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Do NOT ignore model/ — the joblib model is tracked via Git LFS
