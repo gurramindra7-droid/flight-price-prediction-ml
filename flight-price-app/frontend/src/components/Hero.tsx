@@ -1,22 +1,75 @@
-import { Suspense, lazy } from "react";
-import { motion } from "framer-motion";
-import { CinematicIntro } from "./CinematicIntro";
-import { METRICS } from "../metrics";
-import { getCapabilities } from "../capabilities";
+import {
+  Suspense,
+  lazy,
+} from "react";
 
-/** Code-split the heavy 3D hero scene so it never blocks first paint. */
-const FlightScene = lazy(() =>
-  import("../three/FlightScene").then((m) => ({ default: m.FlightScene })),
+import { motion } from "framer-motion";
+
+import {
+  CinematicIntro,
+} from "./CinematicIntro";
+
+import {
+  SceneErrorBoundary,
+} from "./SceneErrorBoundary";
+
+import {
+  METRICS,
+} from "../metrics";
+
+import {
+  getCapabilities,
+} from "../capabilities";
+
+
+/**
+ * Heavy R3F scene is code-split so the first HTML/UI paint does not
+ * depend on the Three.js bundle.
+ */
+const FlightScene = lazy(
+  () =>
+    import("../three/FlightScene").then(
+      (module) => ({
+        default: module.FlightScene,
+      }),
+    ),
 );
+
 
 const container = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.14, delayChildren: 0.15 } },
+
+  show: {
+    transition: {
+      staggerChildren: 0.14,
+      delayChildren: 0.15,
+    },
+  },
 };
+
+
 const item = {
-  hidden: { opacity: 0, y: 26 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as const } },
+  hidden: {
+    opacity: 0,
+    y: 26,
+  },
+
+  show: {
+    opacity: 1,
+    y: 0,
+
+    transition: {
+      duration: 0.8,
+      ease: [
+        0.16,
+        1,
+        0.3,
+        1,
+      ] as const,
+    },
+  },
 };
+
 
 export function Hero({
   introDone,
@@ -27,74 +80,218 @@ export function Hero({
   reduced: boolean;
   onIntroFinish: () => void;
 }) {
+  const capabilities =
+    getCapabilities();
+
+  const canUse3D =
+    !reduced &&
+    capabilities.webgl;
+
+
   return (
-    <section id="top" className="hero" aria-label="Flight Intelligence — flight price prediction">
-      {/* 3D scene mounted whenever WebGL is viable; static gradient otherwise */}
-      <div className="hero-scene" aria-hidden="true">
-        {reduced || !getCapabilities().webgl ? (
-          <div className="hero-static-fallback" />
+    <section
+      id="top"
+      className="hero"
+      aria-label="Flight Intelligence — flight price prediction"
+    >
+
+      {/* -------------------------------------------------------------- */}
+      {/* 3D HERO SCENE                                                  */}
+      {/* -------------------------------------------------------------- */}
+
+      <div
+        className="hero-scene"
+        aria-hidden="true"
+      >
+        {canUse3D ? (
+          <SceneErrorBoundary
+            fallback={
+              <div
+                className="hero-static-fallback"
+                data-scene-fallback="true"
+              />
+            }
+          >
+            <Suspense
+              fallback={
+                <div
+                  className="hero-static-fallback"
+                  data-scene-fallback="loading"
+                />
+              }
+            >
+              <FlightScene
+                reduced={false}
+              />
+            </Suspense>
+          </SceneErrorBoundary>
         ) : (
-          <Suspense fallback={null}>
-            <FlightScene reduced={reduced} />
-          </Suspense>
+          <div
+            className="hero-static-fallback"
+            data-scene-fallback="unsupported"
+          />
         )}
       </div>
 
-      {!introDone && <CinematicIntro onFinish={onIntroFinish} />}
+
+      {/* -------------------------------------------------------------- */}
+      {/* CINEMATIC INTRO                                                 */}
+      {/* -------------------------------------------------------------- */}
+
+      {!introDone && (
+        <CinematicIntro
+          onFinish={
+            onIntroFinish
+          }
+        />
+      )}
+
+
+      {/* -------------------------------------------------------------- */}
+      {/* HERO CONTENT                                                    */}
+      {/* -------------------------------------------------------------- */}
 
       <motion.div
         className="container hero-content"
+
         variants={container}
+
         initial="hidden"
-        animate={introDone ? "show" : "hidden"}
-        aria-hidden={!introDone}
+
+        animate={
+          introDone
+            ? "show"
+            : "hidden"
+        }
+
+        aria-hidden={
+          !introDone
+        }
       >
-        <motion.p className="eyebrow" variants={item}>
-          AI-POWERED FLIGHT FARE PREDICTION
+
+        <motion.p
+          className="eyebrow"
+          variants={item}
+        >
+          AI-POWERED FLIGHT FARE
+          PREDICTION
         </motion.p>
 
-        <motion.h1 className="display-xl hero-title" variants={item}>
-          Predict Before <span className="grad-text">You Fly.</span>
+
+        <motion.h1
+          className="display-xl hero-title"
+          variants={item}
+        >
+          Predict Before{" "}
+          <span className="grad-text">
+            You Fly.
+          </span>
         </motion.h1>
 
-        <motion.p className="lead hero-lead" variants={item}>
-          AI-powered flight fare estimation built around route, timing, airline, duration,
-          stops and travel class — computed in real time by a trained model.
+
+        <motion.p
+          className="lead hero-lead"
+          variants={item}
+        >
+          AI-powered flight fare
+          estimation built around
+          route, timing, airline,
+          duration, stops and
+          travel class — computed
+          in real time by a trained
+          model.
         </motion.p>
 
-        <motion.div className="hero-cta" variants={item}>
-          <a href="#predict" className="btn btn-primary">
+
+        <motion.div
+          className="hero-cta"
+          variants={item}
+        >
+
+          <a
+            href="#predict"
+            className="btn btn-primary"
+          >
             Predict Flight Price
+
             <ArrowGlyph />
           </a>
-          <a href="#routes" className="btn btn-ghost">
+
+
+          <a
+            href="#routes"
+            className="btn btn-ghost"
+          >
             Explore the Network
           </a>
+
         </motion.div>
 
-        <motion.dl className="hero-metrics" variants={item}>
-          {METRICS.map((m) => (
-            <div key={m.label} className="metric">
-              <dt>{m.label}</dt>
-              <dd>{m.value}</dd>
-            </div>
-          ))}
+
+        <motion.dl
+          className="hero-metrics"
+          variants={item}
+        >
+          {METRICS.map(
+            (metric) => (
+              <div
+                key={metric.label}
+                className="metric"
+              >
+                <dt>
+                  {metric.label}
+                </dt>
+
+                <dd>
+                  {metric.value}
+                </dd>
+              </div>
+            ),
+          )}
         </motion.dl>
-        <motion.p className="hero-metrics-note" variants={item}>
-          Validation/test metrics from the trained Extra Trees model.
+
+
+        <motion.p
+          className="hero-metrics-note"
+          variants={item}
+        >
+          Validation/test metrics
+          from the trained Extra
+          Trees model.
         </motion.p>
+
       </motion.div>
 
-      <a className="hero-scroll-cue" href="#predict" aria-label="Scroll to prediction section">
-        <span className="hero-scroll-line" aria-hidden="true" />
+
+      {/* -------------------------------------------------------------- */}
+      {/* SCROLL CUE                                                      */}
+      {/* -------------------------------------------------------------- */}
+
+      <a
+        className="hero-scroll-cue"
+        href="#predict"
+        aria-label="Scroll to prediction section"
+      >
+        <span
+          className="hero-scroll-line"
+          aria-hidden="true"
+        />
       </a>
+
     </section>
   );
 }
 
+
 function ArrowGlyph() {
   return (
-    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+    <svg
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M2 8h11M9 4l4 4-4 4"
         stroke="currentColor"
